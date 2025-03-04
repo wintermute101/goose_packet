@@ -11,9 +11,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 
 pub fn encodeGooseFrame(header: & mut EthernetHeader, pdu: & IECGoosePdu, buffer: &mut[u8], pos:usize) ->usize{
-    let mut new_pos=pos+ 26;
+    let mut new_pos=pos+ 22;
     new_pos=encodeIECGoosePdu(pdu,buffer,new_pos);
-    let goose_length=new_pos-26+8;
+    let goose_length=new_pos-22+8;
     let legnth_byte=goose_length.to_be_bytes();
     header.length.copy_from_slice(&legnth_byte[6..]);
     encodeEthernetHeader(header,buffer,pos);
@@ -30,11 +30,11 @@ pub fn encodeEthernetHeader(header: & EthernetHeader, buffer: &mut[u8], pos:usiz
     buffer[new_pos..new_pos+6].copy_from_slice(&header.srcAddr);
     new_pos=new_pos+6;
 
-    buffer[new_pos..new_pos+2].copy_from_slice(&header.TPID);
-    new_pos=new_pos+2;
+    //buffer[new_pos..new_pos+2].copy_from_slice(&header.TPID);
+    //new_pos=new_pos+2;
 
-    buffer[new_pos..new_pos+2].copy_from_slice(&header.TCI);
-    new_pos=new_pos+2;
+    //buffer[new_pos..new_pos+2].copy_from_slice(&header.TCI);
+    //new_pos=new_pos+2;
 
     buffer[new_pos..new_pos+2].copy_from_slice(&header.ehterType);
     new_pos=new_pos+2;
