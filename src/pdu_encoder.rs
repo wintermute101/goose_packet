@@ -63,6 +63,8 @@ pub fn fillIECGoosePdu(pdu: & IECGoosePdu, buffer: &mut[u8], pos:usize, goosePdu
     let mut new_pos=pos;
     let fill= true;
 
+    //println!("goose pdu len: {}", goosePduLength);
+
     new_pos=encode_tag_length(0x61,goosePduLength,buffer,new_pos,fill );
 
     new_pos=encode_string(0x80, &pdu.gocbRef, buffer, new_pos, fill);
@@ -95,7 +97,6 @@ pub fn fillIECGoosePdu(pdu: & IECGoosePdu, buffer: &mut[u8], pos:usize, goosePdu
 
 }
 
-
 pub fn sizeIECData(pdu: & IECGoosePdu, buffer: &mut[u8]) ->usize{
 
     let mut dataSetSize=0;
@@ -103,10 +104,7 @@ pub fn sizeIECData(pdu: & IECGoosePdu, buffer: &mut[u8]) ->usize{
     for i in 0..pdu.allData.len() {
         dataSetSize+=sizeIECDataElement(&pdu.allData[i], buffer);
     }
-    //println!("dataSetSize {}",dataSetSize);
     dataSetSize
-
-
 }
 
 pub fn sizeIECDataElement(data: & IECData, buffer: &mut[u8]) ->usize{

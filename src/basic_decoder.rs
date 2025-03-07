@@ -1,3 +1,5 @@
+use crate::error::GooseError;
+
 pub fn decode_boolean(value:&mut bool,buffer: &[u8],pos:usize) ->usize{
     *value=buffer[pos]!=0;
     pos+1
@@ -13,13 +15,12 @@ pub fn decode_octet_string(value:& mut [u8],buffer: &[u8],pos:usize,length:usize
     pos+length
 }
 
-
 pub fn decompress_integer(value: & mut [u8],buffer: &[u8],pos:usize,length:usize) {
     let mut fill=0x00;
     if buffer[pos] &0x80 == 0x80 {
         fill=0xff;
     }
-    let fill_length=value.len()-length;    
+    let fill_length=value.len()-length; //fix me may panic
     for i in 0..value.len()-fill_length{
         value[i]=fill;
     }
@@ -76,7 +77,6 @@ pub fn decode_unsigned(value:&mut u32, buffer: &[u8],pos:usize,length:usize) ->u
     pos+length
 }
 
-
 pub fn decode_float(value:&mut f32,buffer: &[u8],pos:usize,length:usize) ->usize{
     let mut bytes=[0 as u8;4];
     
@@ -105,6 +105,7 @@ pub fn decode_bit_string(value:& mut [u8],padding:&mut u8,buffer: &[u8],pos:usiz
     new_pos+value.len()
 }
 
+pub fn decode_tag_length(tag:&mut u8,value:&mut usize,buffer: &[u8],pos:usize) -> Result<usize, GooseError>{
 
     let mut new_pos=pos;
     *tag=buffer[new_pos];
@@ -119,7 +120,7 @@ pub fn decode_bit_string(value:& mut [u8],padding:&mut u8,buffer: &[u8],pos:usiz
         },
         0x82=>{
             new_pos+=1;  
-            *value= buffer[new_pos] as usize *256;
+            *value= buffer[new_pos] as usize *0x100;
             new_pos+=1;     
             *value+= (buffer[new_pos])as usize;
             new_pos+=1;     
@@ -129,20 +130,21 @@ pub fn decode_bit_string(value:& mut [u8],padding:&mut u8,buffer: &[u8],pos:usiz
             new_pos+=1;  
             *value= buffer[new_pos] as usize *0x10000;
             new_pos+=1;     
-            *value+= buffer[new_pos]as usize *0x100;
+            *value+= buffer[new_pos] as usize *0x100;
             new_pos+=1;     
             *value+= (buffer[new_pos])as usize;
             new_pos+=1;         
     
         },
         _=>{
-            if buffer[new_pos]>0x83 {panic!("unexpexted legnth");}
-            *value=buffer[new_pos]  as usize;
+            if buffer[new_pos]>0x83 {return Err(GooseError { message: "unexpexted legnth".to_owned(), pos: new_pos });}
+            *value=buffer[new_pos] as usize;
             new_pos+=1;  
 
         }
     }
-
-
-    new_pos
+    if pos + *value > buffer.len(){
+        return Err(GooseError{ message: "tag len lagerger than buffer".to_owned(), pos: pos});
+    }
+    Ok(new_pos)
 }

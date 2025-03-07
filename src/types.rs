@@ -30,11 +30,9 @@ pub enum IECData{
 pub struct EthernetHeader {
     pub srcAddr:[u8;6],
     pub dstAddr:[u8;6],
-    pub TPID:[u8;2],
-    pub TCI:[u8;2],
-    pub ehterType:[u8;2],
+    pub VLANID:Option<u16>,
     pub APPID:[u8;2],
-    pub length:[u8;2]
+    pub length: u16
 }
 
 #[derive(Debug,Default,Clone)]
@@ -50,7 +48,8 @@ pub struct IECGoosePdu {
     pub confRev: u32,
     pub ndsCom: bool,
     pub numDatSetEntries: u32,
-    pub allData: Vec<IECData>
+    pub allData: Vec<IECData>,
+    pub frameEnd: Option<[u8;6]>
 }
 
 impl IECGoosePdu {

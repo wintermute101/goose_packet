@@ -54,11 +54,9 @@ fn main(){
     let mut ether_header= EthernetHeader{
         srcAddr:[00 as u8;6],
         dstAddr:[0x01,0x0C,0xCD,0x01,0x00,0x01],
-        TPID:[0x81,0x00],
-        TCI:[0x80,0x01], 
-        ehterType:[0x88,0xB8],
+        VLANID: Some(0x8001), 
         APPID:[0x01,0x01],
-        length:[0x00,0x00]
+        length: 0
     };
     let current_time=getTimeMs();
     let goose_data=vec![
@@ -96,7 +94,8 @@ fn main(){
         confRev:5,
         ndsCom:false,
         numDatSetEntries:goose_data.len() as u32,
-        allData:goose_data         
+        allData:goose_data,
+        frameEnd: None      
         };
 
     goose_pdu.numDatSetEntries=goose_pdu.allData.len() as u32;    

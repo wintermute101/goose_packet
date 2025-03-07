@@ -2,7 +2,7 @@ extern crate goose_packet;
 
 use pnet::datalink::{self,interfaces,Channel, NetworkInterface};
 use goose_packet::types::{IECGoosePdu,EthernetHeader};
-use goose_packet::pdu::{decodeGooseFrame,};
+use goose_packet::pdu::decodeGooseFrame;
 
 use std::env;
 
@@ -49,20 +49,25 @@ fn main(){
         Err(e) => panic!("Error happened {}", e),
     };
 
-    let mut rx_header:EthernetHeader=Default::default();
-    let mut rx_pdu:IECGoosePdu=Default::default();
     println!("start listening goose messages");
 
     loop {
         match rx.next() {
             Ok(packet) => {
                 println!("something received");
-                //display_buffer(packet, packet.len());
-                let result=decodeGooseFrame(&mut rx_header,&mut rx_pdu,&packet,0);   
-                if result.is_ok()
+                //display_buffer(packet, packet.len())
+                if let Some(result) = decodeGooseFrame(&packet,0)
                 {
-                    println!("decode header {:?}",rx_header);
-                    println!("decode pdu {:?}",rx_pdu);
+                    match result {
+                        Ok((header, pdu)) =>{
+                            println!("decode header {:?}",header);
+                            println!("decode pdu {:?}",pdu);
+                        },
+                        Err(e) =>{
+                            eprintln!("Error parsing goose fraame {} at posistion {}", e.message, e.pos);
+                        }
+                        
+                    }
                 }
 
             },

@@ -5,14 +5,13 @@ use crate::error::GooseError;
 use crate::types::{*};
 use crate::basic_decoder::{*};
 
-
 pub fn decodeIECDataElement(buffer: &[u8], pos:usize) ->Result<(usize,IECData),GooseError>{
     
     let mut new_pos=pos;
 
     let mut tag:u8=0;
     let mut length:usize=0;
-    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos);
+    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos)?;
 
     match  tag{
         0x83=> {
@@ -114,7 +113,6 @@ pub fn decodeIECDataElement(buffer: &[u8], pos:usize) ->Result<(usize,IECData),G
                 }
 
             }
-
         },
         0x8a=>{
             let mut val:String="".to_string();
@@ -176,52 +174,63 @@ pub fn decodeIECData(data: &mut Vec<IECData>, buffer: &[u8], pos:usize, end:usiz
     }
 
     Ok(new_pos)
-
 }
-pub fn decodeIECGoosePdu(pdu: & mut IECGoosePdu, buffer: &[u8], pos:usize) ->Result<usize,GooseError>{
+
+pub fn decodeIECGoosePdu(pdu: & mut IECGoosePdu, buffer: &[u8], pos:usize) -> Result<usize,GooseError>{
 
     let mut new_pos=pos;
     let mut tag:u8=0;
     let mut length:usize=0;
 
     //goosePduLength
-    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos);
+    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos)?;
+    if tag != 0x61{
+        return Err(GooseError{ message: "first tag != 61".into(), pos: new_pos});
+    }
 
-    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos);
+    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos)?;
     new_pos=decode_string(&mut pdu.gocbRef,buffer,new_pos,length);
 
-    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos);
+    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos)?;
     new_pos=decode_unsigned(&mut pdu.timeAllowedtoLive,buffer,new_pos,length);
 
-    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos);
+    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos)?;
     new_pos=decode_string(&mut pdu.datSet,buffer,new_pos,length);
 
-    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos);
+    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos)?;
     new_pos=decode_string(&mut pdu.goID,buffer,new_pos,length);
 
-    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos);
+    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos)?;
     new_pos=decode_octet_string(&mut pdu.t,buffer,new_pos,length);
 
-    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos);
+    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos)?;
     new_pos=decode_unsigned(&mut pdu.stNum,buffer,new_pos,length);
 
-    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos);
+    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos)?;
     new_pos=decode_unsigned(&mut pdu.sqNum,buffer,new_pos,length);
 
-    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos);
+    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos)?;
     new_pos=decode_boolean(&mut pdu.simulation,buffer,new_pos);
 
-    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos);
+    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos)?;
     new_pos=decode_unsigned(&mut pdu.confRev,buffer,new_pos,length);
 
-    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos);
+    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos)?;
     new_pos=decode_boolean(&mut pdu.ndsCom,buffer,new_pos);
 
-    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos);
+    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos)?;
     new_pos=decode_unsigned(&mut pdu.numDatSetEntries,buffer,new_pos,length);
 
-    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos);
+    new_pos=decode_tag_length(&mut tag,&mut length,buffer,new_pos)?;
+    if tag != 0xab{
+        return Err(GooseError{ message: "allData tag != ab".into(), pos: new_pos});
+    }
     new_pos=decodeIECData(&mut pdu.allData,buffer,new_pos,new_pos+length)?;
+
+    if pdu.numDatSetEntries as usize != pdu.allData.len(){
+        eprintln!("all data len {} pdu {}", pdu.allData.len(), pdu.numDatSetEntries);
+        return Err(GooseError{ message: "allData size does not match data entries".into(), pos: new_pos});
+    }
 
     //print!("decode pdu: {:?}",pdu);
     Ok(new_pos)
