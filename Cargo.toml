@@ -1,8 +1,8 @@
 [package]
 name = "goose_packet"
 version = "0.1.0"
-authors = ["Jiahao Xie <orbitdoc@outlook.com>"]
-edition = "2018"
+authors = ["Jiahao Xie <orbitdoc@outlook.com>", "Maciej Skrzypek <wintermute101 [at] gmail.com"]
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
