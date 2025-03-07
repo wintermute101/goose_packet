@@ -59,7 +59,7 @@ pub fn encodeEthernetHeader(header: & EthernetHeader, buffer: &mut[u8], pos:usiz
     buffer[new_pos..new_pos+2].copy_from_slice(&header.APPID);
     new_pos=new_pos+2;
 
-    buffer[new_pos..new_pos+2].copy_from_slice(&ether_len.to_be_bytes());
+    buffer[new_pos..new_pos+2].copy_from_slice(&(ether_len+8).to_be_bytes()); //+8 to include this data from appid
     new_pos=new_pos+2;
 
     buffer[new_pos..new_pos+2].copy_from_slice(&[0 ;2]); // reserved 1
