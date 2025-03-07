@@ -14,7 +14,7 @@ pub fn encodeIECGoosePdu(pdu: & IECGoosePdu, buffer: &mut[u8], pos:usize) ->usiz
 pub fn sizeIECGoosePdu(pdu: & IECGoosePdu, buffer: &mut[u8]) ->(usize,usize){
 
     let mut goosePduLength=0;
-    
+
     let mut size;
     let fill= false;
 
@@ -72,7 +72,7 @@ pub fn fillIECGoosePdu(pdu: & IECGoosePdu, buffer: &mut[u8], pos:usize, goosePdu
     new_pos=encode_unsigned(0x81, pdu.timeAllowedtoLive, buffer, new_pos, fill);
 
     new_pos=encode_string(0x82, &pdu.datSet, buffer, new_pos, fill);
-    
+
     new_pos=encode_string(0x83, &pdu.goID, buffer, new_pos, fill);
 
     new_pos=encode_octet_string(0x84, &pdu.t, buffer, new_pos, fill);
@@ -108,7 +108,7 @@ pub fn sizeIECData(pdu: & IECGoosePdu, buffer: &mut[u8]) ->usize{
 }
 
 pub fn sizeIECDataElement(data: & IECData, buffer: &mut[u8]) ->usize{
-    
+
     let fill= false;
 
     let dataSetSize=match  data{
@@ -118,7 +118,7 @@ pub fn sizeIECDataElement(data: & IECData, buffer: &mut[u8]) ->usize{
         IECData::int16 (val)=> encode_interger_general(0, &val.to_be_bytes(), buffer, 0, fill),
         IECData::int32 (val)=> encode_interger_general(0, &val.to_be_bytes(), buffer, 0, fill),
         IECData::int64 (val)=> encode_interger_general(0, &val.to_be_bytes(), buffer, 0, fill),
-  
+
         IECData::int8u (val)=> encode_unsigned_general(0, &val.to_be_bytes(), buffer, 0, fill),
         IECData::int16u (val)=> encode_unsigned_general(0, &val.to_be_bytes(), buffer, 0, fill),
         IECData::int32u (val)=> encode_unsigned_general(0, &val.to_be_bytes(), buffer, 0, fill),
@@ -158,7 +158,7 @@ pub fn encode_array(tag:u8, value: &[IECData],buffer: &mut[u8],pos:usize,fill:bo
     for i in 0..value.len(){
         element_size+=sizeIECDataElement(&value[i],buffer);
     }
-    
+
     if !fill {
         return element_size;
     }
@@ -177,7 +177,7 @@ pub fn encode_structure(tag:u8, value: &[IECData],buffer: &mut[u8],pos:usize,fil
 }
 
 pub fn encodeIECDataElement(data: & IECData, buffer: &mut[u8], pos:usize) ->usize{
-    
+
     let fill= true;
     let new_pos=pos;
 
