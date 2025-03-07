@@ -26,7 +26,7 @@ pub enum IECData{
     octet_string(Vec<u8>),
     utc_time([u8;8])
 }
-#[derive(Debug,Default,Clone)]
+#[derive(Serialize,Deserialize,Debug,Default,Clone)]
 pub struct EthernetHeader {
     pub srcAddr:[u8;6],
     pub dstAddr:[u8;6],
@@ -35,7 +35,7 @@ pub struct EthernetHeader {
     pub length: u16
 }
 
-#[derive(Debug,Default,Clone)]
+#[derive(Serialize,Deserialize,Debug,Default,Clone)]
 pub struct IECGoosePdu {
     pub gocbRef: String,
     pub timeAllowedtoLive: u32,
@@ -56,4 +56,10 @@ impl IECGoosePdu {
     pub fn report(&mut self) {
         println!("gocbRef:{},data:{:?}",self.gocbRef,self.allData);
     }
+}
+
+#[derive(Serialize,Deserialize,Debug,Default,Clone)]
+pub struct IECGoosePacket{
+    pub hdr: EthernetHeader,
+    pub pdu: IECGoosePdu,
 }

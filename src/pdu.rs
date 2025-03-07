@@ -9,10 +9,14 @@ use crate::pdu_decoder::{*};
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
+pub fn encodeGoosePacket(pkt: &IECGoosePacket, buffer: &mut[u8], pos:usize) -> usize{
+    encodeGooseFrame(&pkt.hdr, &pkt.pdu, buffer, pos)
+}
+
 pub fn encodeGooseFrame(header: & EthernetHeader, pdu: & IECGoosePdu, buffer: &mut[u8], pos:usize) ->usize{
     let hdr_len= if header.VLANID.is_some(){
         pos + 26
-    } 
+    }
     else {
         pos + 22
     };
@@ -43,7 +47,7 @@ pub fn encodeEthernetHeader(header: & EthernetHeader, buffer: &mut[u8], pos:usiz
     if let Some(vlanid) = header.VLANID{
         buffer[new_pos..new_pos+2].copy_from_slice(&[0x81,0x00]);
         new_pos=new_pos+2;
-    
+
         buffer[new_pos..new_pos+2].copy_from_slice(&vlanid.to_be_bytes());
         new_pos=new_pos+2;
     }
@@ -98,7 +102,17 @@ pub fn display_buffer( buffer: &[u8], size:usize){
     print!("\n");
 }
 
-pub fn decodeGooseFrame(buffer: &[u8], pos:usize) ->Option<Result<(EthernetHeader, IECGoosePdu),GooseError>>{
+pub fn decodeGoosePacket(buffer: &[u8], pos:usize) -> Option<Result<IECGoosePacket,GooseError>>{
+    match decodeGooseFrame(buffer, pos){
+        Some(Ok((hdr, pdu))) =>{
+            Some(Ok(IECGoosePacket {hdr: hdr, pdu: pdu}))
+        },
+        None => None,
+        Some(Err(e)) => Some(Err(e))
+    }
+}
+
+pub fn decodeGooseFrame(buffer: &[u8], pos:usize) -> Option<Result<(EthernetHeader, IECGoosePdu),GooseError>>{
     let mut new_pos=pos;
     let mut header =  EthernetHeader::default();
 

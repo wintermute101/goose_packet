@@ -1,7 +1,6 @@
 extern crate goose_packet;
 
 use pnet::datalink::{self,interfaces,Channel, NetworkInterface};
-use goose_packet::types::{IECGoosePdu,EthernetHeader};
 use goose_packet::pdu::decodeGooseFrame;
 
 use std::env;
@@ -38,7 +37,7 @@ fn main(){
         _=>{
             println!("unknown interface name. the available interface in the system:");
             display_network_interfaces();
-            panic!();           
+            panic!();
         }
 
     };
@@ -66,7 +65,7 @@ fn main(){
                         Err(e) =>{
                             eprintln!("Error parsing goose fraame {} at posistion {}", e.message, e.pos);
                         }
-                        
+
                     }
                 }
 
@@ -75,7 +74,7 @@ fn main(){
                 // If an error occurs, we can handle it here
                 panic!("An error occurred while reading: {}", e);
             }
-        }  
+        }
     }
-    
+
 }
