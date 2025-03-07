@@ -93,7 +93,7 @@ pub fn decode_float_64(value:&mut f64,buffer: &[u8],pos:usize,length:usize) ->us
     pos+length
 }
 
-pub fn decode_bit_string(value:& mut [u8],padding:&mut u8,buffer: &[u8],pos:usize,length:usize) ->usize{
+pub fn decode_bit_string(value:& mut [u8],padding:&mut u8,buffer: &[u8],pos:usize,_length:usize) ->usize{
     let mut new_pos=pos;
 
     *padding=buffer[new_pos];
@@ -102,10 +102,9 @@ pub fn decode_bit_string(value:& mut [u8],padding:&mut u8,buffer: &[u8],pos:usiz
     for i in 0..value.len()  {
         value[value.len()-i-1]=buffer[new_pos+i].reverse_bits();
     }
-    new_pos+length
-    
+    new_pos+value.len()
 }
-pub fn decode_tag_length(tag:&mut u8,value:&mut usize,buffer: &[u8],pos:usize) ->usize{
+
 
     let mut new_pos=pos;
     *tag=buffer[new_pos];
