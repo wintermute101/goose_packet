@@ -1,6 +1,6 @@
 [package]
 name = "goose_packet"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Jiahao Xie <orbitdoc@outlook.com>", "Maciej Skrzypek <wintermute101 [at] gmail.com"]
 edition = "2021"
 
