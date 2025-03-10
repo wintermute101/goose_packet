@@ -1,7 +1,7 @@
 extern crate goose_packet;
 
 use pnet::datalink::{self,interfaces,Channel, NetworkInterface};
-use goose_packet::pdu::decodeGooseFrame;
+use goose_packet::pdu::decodeGoosePacket;
 
 use std::env;
 
@@ -55,12 +55,11 @@ fn main(){
             Ok(packet) => {
                 println!("something received");
                 //display_buffer(packet, packet.len())
-                if let Some(result) = decodeGooseFrame(&packet,0)
+                if let Some(result) = decodeGoosePacket(&packet,0)
                 {
                     match result {
-                        Ok((header, pdu)) =>{
-                            println!("decode header {:?}",header);
-                            println!("decode pdu {:?}",pdu);
+                        Ok((pkt)) =>{
+                            println!("Goose packet {:?}",pkt);
                         },
                         Err(e) =>{
                             eprintln!("Error parsing goose fraame {} at posistion {}", e.message, e.pos);

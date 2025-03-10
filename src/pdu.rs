@@ -10,31 +10,31 @@ use crate::pdu_decoder::{*};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn encodeGoosePacket(pkt: &IECGoosePacket, buffer: &mut[u8], pos:usize) -> usize{
-    encodeGooseFrame(&pkt.hdr, &pkt.pdu, buffer, pos)
+    encodeGooseFrame(&pkt.eth_hdr, &pkt.goose_hdr, &pkt.pdu, &pkt.prp, buffer, pos)
 }
 
-pub fn encodeGooseFrame(header: & EthernetHeader, pdu: & IECGoosePdu, buffer: &mut[u8], pos:usize) ->usize{
-    let hdr_len= if header.VLANID.is_some(){
-        pos + 26
-    }
-    else {
-        pos + 22
-    };
+fn encodeGooseFrame(header: & EthernetHeader, goose_header: &IECGooseHeader, pdu: & IECGoosePdu, prp: &Option<IECPRP1>, buffer: &mut[u8], pos:usize) ->usize{
+    let mut new_pos;
 
-    let mut new_pos = hdr_len;
+    let hdr_pos = encodeEthernetHeader(header,buffer,pos);
+    new_pos = hdr_pos;
+    new_pos = encodeIECGoosePdu(pdu,buffer,new_pos + IECGooseHeader::getSize());
+    let goose_length = new_pos - hdr_pos - IECGooseHeader::getSize();
+    encodeGooseHeader(goose_header, buffer, hdr_pos, goose_length as u16);
 
-    let goose_length=encodeIECGoosePdu(pdu,buffer,new_pos) - hdr_len;
-    encodeEthernetHeader(header,buffer,pos, goose_length as u16);
-
-    new_pos += goose_length;
-    if let Some(end) = pdu.frameEnd{
-        buffer[new_pos..new_pos+6].copy_from_slice(&end);
-        new_pos += 6;
+    if let Some(prp) = prp{
+        let frame_size = if header.VLANID.is_some(){
+            new_pos - hdr_pos + 4
+        }
+        else{
+            new_pos - hdr_pos
+        };
+        new_pos = encodeIECPRP1(&prp, buffer, frame_size as u16, new_pos);
     }
     new_pos
 }
 
-pub fn encodeEthernetHeader(header: & EthernetHeader, buffer: &mut[u8], pos:usize, ether_len: u16) ->usize{
+fn encodeEthernetHeader(header: & EthernetHeader, buffer: &mut[u8], pos:usize) ->usize{
 
     let mut new_pos=pos;
 
@@ -52,14 +52,19 @@ pub fn encodeEthernetHeader(header: & EthernetHeader, buffer: &mut[u8], pos:usiz
         new_pos=new_pos+2;
     }
 
-    buffer[new_pos..new_pos+2].copy_from_slice(&[0x88, 0xb8]);
-    new_pos=new_pos+2;
+    new_pos
+}
 
+fn encodeGooseHeader(header: &IECGooseHeader, buffer: &mut[u8], pos:usize, goose_len: u16) ->usize{
+    let mut new_pos=pos;
+
+    buffer[new_pos..new_pos+2].copy_from_slice(&[0x88, 0xb8]);
+    new_pos+=2;
     // Start of GOOSE length
     buffer[new_pos..new_pos+2].copy_from_slice(&header.APPID);
     new_pos=new_pos+2;
 
-    buffer[new_pos..new_pos+2].copy_from_slice(&(ether_len+8).to_be_bytes()); //+8 to include this data from appid
+    buffer[new_pos..new_pos+2].copy_from_slice(&(goose_len+8).to_be_bytes()); //+8 to include this data from appid
     new_pos=new_pos+2;
 
     buffer[new_pos..new_pos+2].copy_from_slice(&[0 ;2]); // reserved 1
@@ -69,7 +74,24 @@ pub fn encodeEthernetHeader(header: & EthernetHeader, buffer: &mut[u8], pos:usiz
     new_pos=new_pos+2;
 
     new_pos
+}
 
+fn encodeIECPRP1(prp: &IECPRP1, buffer: &mut[u8], frame_size: u16, mut pos:usize) -> usize{
+    buffer[pos..pos+2].copy_from_slice(&prp.sequence.to_be_bytes());
+    pos += 2;
+
+    let lan = match prp.lan{
+        IECPRPLAN::LAN_A => 0b1010 << 12 as u16,
+        IECPRPLAN::LAN_B => 0b1011 << 12 as u16,
+    };
+
+    let fsize = lan | frame_size & 0x0fff;
+
+    buffer[pos..pos+2].copy_from_slice(&fsize.to_be_bytes());
+    pos += 2;
+
+    buffer[pos..pos+2].copy_from_slice(&[0x88, 0xfb]);
+    pos + 2
 }
 
 pub fn getTimeMs()->[u8;8]{
@@ -102,86 +124,96 @@ pub fn display_buffer( buffer: &[u8], size:usize){
     print!("\n");
 }
 
-pub fn decodeGoosePacket(buffer: &[u8], pos:usize) -> Option<Result<IECGoosePacket,GooseError>>{
-    match decodeGooseFrame(buffer, pos){
-        Some(Ok((hdr, pdu))) =>{
-            Some(Ok(IECGoosePacket {hdr: hdr, pdu: pdu}))
-        },
-        None => None,
-        Some(Err(e)) => Some(Err(e))
+fn decodeIECPRP1(buffer: &[u8], pos: &mut usize) -> Result<Option<IECPRP1>, GooseError>{
+    println!("Decode PRP {} {}", *pos, buffer.len());
+    if (buffer.len() - *pos == 6) && buffer[*pos+4] == 0x88 && buffer[*pos+5] == 0xfb {
+        let seq = u16::from_be_bytes(buffer[*pos..*pos+2].try_into().unwrap());
+        *pos += 2;
+        let fsize = u16::from_be_bytes(buffer[*pos..*pos+2].try_into().unwrap());
+        match fsize >> 12{
+            0b1010 => Ok(Some(IECPRP1{ sequence: seq, lan: IECPRPLAN::LAN_A, frame_size: fsize & 0x0fff })),
+            0b1011 => Ok(Some(IECPRP1{ sequence: seq, lan: IECPRPLAN::LAN_B, frame_size: fsize & 0x0fff })),
+            _=> Err(GooseError{message: "IEC PRP LAN undefined".into(), pos: *pos})
+        }
+    }
+    else{
+        Ok(None)
     }
 }
 
-pub fn decodeGooseFrame(buffer: &[u8], pos:usize) -> Option<Result<(EthernetHeader, IECGoosePdu),GooseError>>{
-    let mut new_pos=pos;
-    let mut header =  EthernetHeader::default();
+pub fn decodeGoosePacket(buffer: &[u8], mut pos:usize) -> Option<Result<IECGoosePacket,GooseError>>{
 
-    new_pos = match decodeEthernetHeader(&mut header,buffer,new_pos){
-        Some(Ok(v)) => {v},
-        Some(Err(e)) => {
-            return Some(Err(e));
-        }
-        None => {return None;}
+    let header = match decodeEthernetHeader(buffer,&mut pos){
+        Ok(e) => e,
+        Err(e) => {return Some(Err(e));}
     };
 
-    let mut pdu = IECGoosePdu::default();
+    let goose_hedaer = match decodeGooseHeader(buffer, &mut pos) {
+        Some(Ok(h)) => h,
+        Some(Err(e)) => {return Some(Err(e));},
+        None => {return  None;},
+    };
 
-    new_pos=match decodeIECGoosePdu(&mut pdu,buffer,new_pos){
+    let pdu =match decodeIECGoosePdu(buffer, &mut pos){
         Err(e) => {
             return Some(Err(e));
         }
         Ok(v) => {v}
     };
-    if buffer.len() - new_pos == 6{
-        let mut end = [0;6];
-        end.copy_from_slice(&buffer[new_pos..new_pos+6]);
-        pdu.frameEnd = Some(end);
-    }
-    Some(Ok((header, pdu)))
+
+    let prp = match decodeIECPRP1(buffer, &mut pos){
+        Ok(v) => v,
+        Err(e) => {return Some(Err(e));}
+    };
+
+    Some(Ok(IECGoosePacket{eth_hdr: header, goose_hdr: goose_hedaer, pdu: pdu, prp: prp}))
+
 }
 
-pub fn decodeEthernetHeader(header: & mut EthernetHeader, buffer: &[u8], pos:usize) -> Option<Result<usize,GooseError>>{
+fn decodeEthernetHeader(buffer: &[u8], pos: &mut usize) -> Result<EthernetHeader,GooseError>{
+    if *pos + 18 > buffer.len(){
+        return Err(GooseError{ message: "Buffer too short".into(), pos: *pos});
+    }
+    let mut header = EthernetHeader::default();
+    header.dstAddr.copy_from_slice(&buffer[*pos..*pos+6]);
+    *pos+=6;
 
-    let mut new_pos=pos;
-
-    header.dstAddr.copy_from_slice(&buffer[new_pos..new_pos+6]);
-    new_pos=new_pos+6;
-
-    header.srcAddr.copy_from_slice(&buffer[new_pos..new_pos+6]);
-    new_pos=new_pos+6;
+    header.srcAddr.copy_from_slice(&buffer[*pos..*pos+6]);
+    *pos+=6;
 
     let mut ether_type = [0;2];
-
-    ether_type.copy_from_slice(&buffer[new_pos..new_pos+2]);
-    new_pos += 2;
+    ether_type.copy_from_slice(&buffer[*pos..*pos+2]);
 
     if ether_type ==[0x81,0x00]{ //if vlan
-        let vlanid = u16::from_be_bytes(buffer[new_pos..new_pos+2].try_into().unwrap());
+        *pos += 2;
+        let vlanid = u16::from_be_bytes(buffer[*pos..*pos+2].try_into().unwrap());
         header.VLANID = Some(vlanid);
-        new_pos=new_pos+2;
-
-        //https://github.com/libpnet/libpnet/issues/460
-        //println!("vlan stripped");
-
-        ether_type.copy_from_slice(&buffer[new_pos..new_pos+2]);
-        new_pos += 2;
+        *pos+=2;
     }
+    Ok(header)
+}
 
+fn decodeGooseHeader(buffer: &[u8], pos: &mut usize) -> Option<Result<IECGooseHeader, GooseError>>{
+    if *pos + 10 > buffer.len(){
+        return Some(Err(GooseError{ message: "Buffer too short".into(), pos: *pos}));
+    }
+    let mut header =IECGooseHeader::default();
+    let mut ether_type = [0;2];
+    ether_type.copy_from_slice(&buffer[*pos..*pos+2]);
+    *pos += 2;
     if ether_type !=[0x88,0xb8]
     {
         return None;
     }
 
-    header.APPID.copy_from_slice(&buffer[new_pos..new_pos+2]);
-    new_pos=new_pos+2;
+    header.APPID.copy_from_slice(&buffer[*pos..*pos+2]);
+    *pos+=2;
 
-    header.length= u16::from_be_bytes(buffer[new_pos..new_pos+2].try_into().unwrap());
-    new_pos=new_pos+2;
+    header.length= u16::from_be_bytes(buffer[*pos..*pos+2].try_into().unwrap());
+    *pos+=2;
 
-    new_pos=new_pos+2;  // reserved 1
+    *pos+=2;  // reserved 1
+    *pos+=2;  // reserved 2
 
-    new_pos=new_pos+2; // reserved 2
-
-    Some(Ok(new_pos))
-
+    Some(Ok(header))
 }

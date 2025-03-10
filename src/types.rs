@@ -31,8 +31,18 @@ pub struct EthernetHeader {
     pub srcAddr:[u8;6],
     pub dstAddr:[u8;6],
     pub VLANID:Option<u16>,
+}
+
+#[derive(Serialize,Deserialize,Debug,Default,Clone)]
+pub struct IECGooseHeader {
     pub APPID:[u8;2],
     pub length: u16
+}
+
+impl IECGooseHeader {
+    pub fn getSize() -> usize{
+        10
+    }
 }
 
 #[derive(Serialize,Deserialize,Debug,Default,Clone)]
@@ -49,7 +59,6 @@ pub struct IECGoosePdu {
     pub ndsCom: bool,
     pub numDatSetEntries: u32,
     pub allData: Vec<IECData>,
-    pub frameEnd: Option<[u8;6]>
 }
 
 impl IECGoosePdu {
@@ -58,8 +67,23 @@ impl IECGoosePdu {
     }
 }
 
+#[derive(Serialize,Deserialize,Debug,Clone)]
+pub enum IECPRPLAN{
+    LAN_A,
+    LAN_B,
+}
+
+#[derive(Serialize,Deserialize,Debug,Clone)]
+pub struct IECPRP1 { //IEC 62439-3 Parallel Redundancy Protocol (PRP)
+    pub sequence: u16,
+    pub lan: IECPRPLAN,
+    pub frame_size: u16,
+}
+
 #[derive(Serialize,Deserialize,Debug,Default,Clone)]
 pub struct IECGoosePacket{
-    pub hdr: EthernetHeader,
+    pub eth_hdr: EthernetHeader,
+    pub goose_hdr: IECGooseHeader,
     pub pdu: IECGoosePdu,
+    pub prp: Option<IECPRP1>,
 }
