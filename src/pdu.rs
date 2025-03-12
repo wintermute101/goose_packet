@@ -125,7 +125,6 @@ pub fn display_buffer( buffer: &[u8], size:usize){
 }
 
 fn decodeIECPRP1(buffer: &[u8], pos: &mut usize) -> Result<Option<IECPRP1>, GooseError>{
-    println!("Decode PRP {} {}", *pos, buffer.len());
     if (buffer.len() - *pos == 6) && buffer[*pos+4] == 0x88 && buffer[*pos+5] == 0xfb {
         let seq = u16::from_be_bytes(buffer[*pos..*pos+2].try_into().unwrap());
         *pos += 2;
