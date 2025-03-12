@@ -58,7 +58,7 @@ fn main(){
                 if let Some(result) = decodeGoosePacket(&packet,0)
                 {
                     match result {
-                        Ok((pkt)) =>{
+                        Ok(pkt) =>{
                             println!("Goose packet {:?}",pkt);
                         },
                         Err(e) =>{

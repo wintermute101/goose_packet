@@ -51,7 +51,7 @@ fn main(){
         Err(e) => panic!("Error happened {}", e),
     };
 
-    let mut ether_header= EthernetHeader{
+    let ether_header= EthernetHeader{
         srcAddr:[00 as u8;6],
         dstAddr:[0x01,0x0C,0xCD,0x01,0x00,0x01],
         VLANID: Some(0x8001),
