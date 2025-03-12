@@ -7,7 +7,7 @@ pub fn decode_boolean(value:&mut bool,buffer: &[u8],pos:usize) ->usize{
 
 pub fn decode_string(value:& mut String,buffer: &[u8],pos:usize,length:usize) ->usize{
     *value=String::from_utf8_lossy(&buffer[pos..pos+length]).to_string();
-    pos+length    
+    pos+length
 }
 
 pub fn decode_octet_string(value:& mut [u8],buffer: &[u8],pos:usize,length:usize) ->usize{
@@ -79,7 +79,7 @@ pub fn decode_unsigned(value:&mut u32, buffer: &[u8],pos:usize,length:usize) ->u
 
 pub fn decode_float(value:&mut f32,buffer: &[u8],pos:usize,length:usize) ->usize{
     let mut bytes=[0 as u8;4];
-    
+
     bytes.copy_from_slice(&buffer[pos+1..pos+5]);
     *value=f32::from_be_bytes(bytes);
     pos+length
@@ -87,7 +87,7 @@ pub fn decode_float(value:&mut f32,buffer: &[u8],pos:usize,length:usize) ->usize
 
 pub fn decode_float_64(value:&mut f64,buffer: &[u8],pos:usize,length:usize) ->usize{
     let mut bytes=[0 as u8;8];
-    
+
     bytes.copy_from_slice(&buffer[pos+1..pos+9]);
     *value=f64::from_be_bytes(bytes);
     pos+length
@@ -112,34 +112,34 @@ pub fn decode_tag_length(tag:&mut u8,value:&mut usize,buffer: &[u8],pos:usize) -
     new_pos+=1;
 
     match buffer[new_pos] {
-        0x81=>{ 
-            new_pos+=1;  
+        0x81=>{
+            new_pos+=1;
             *value=buffer[new_pos] as usize;
-            new_pos+=1;  
+            new_pos+=1;
 
         },
         0x82=>{
-            new_pos+=1;  
+            new_pos+=1;
             *value= buffer[new_pos] as usize *0x100;
-            new_pos+=1;     
+            new_pos+=1;
             *value+= (buffer[new_pos])as usize;
-            new_pos+=1;     
+            new_pos+=1;
 
         },
         0x83=>{
-            new_pos+=1;  
+            new_pos+=1;
             *value= buffer[new_pos] as usize *0x10000;
-            new_pos+=1;     
+            new_pos+=1;
             *value+= buffer[new_pos] as usize *0x100;
-            new_pos+=1;     
+            new_pos+=1;
             *value+= (buffer[new_pos])as usize;
-            new_pos+=1;         
-    
+            new_pos+=1;
+
         },
         _=>{
             if buffer[new_pos]>0x83 {return Err(GooseError { message: "unexpexted legnth".to_owned(), pos: new_pos });}
             *value=buffer[new_pos] as usize;
-            new_pos+=1;  
+            new_pos+=1;
 
         }
     }
